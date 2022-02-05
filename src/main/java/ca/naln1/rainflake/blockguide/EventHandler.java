@@ -1,13 +1,17 @@
 package ca.naln1.rainflake.blockguide;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.widget.list.KeyBindingList;
 import net.minecraft.client.particle.ParticleManager;
 import net.minecraft.client.settings.HotbarSnapshot;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.loot.conditions.KilledByPlayer;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -16,6 +20,7 @@ import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.math.EntityRayTraceResult;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.DrawHighlightEvent;
@@ -23,16 +28,19 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.model.b3d.B3DModel;
 import net.minecraftforge.client.settings.KeyBindingMap;
+import net.minecraftforge.common.animation.TimeValues;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.player.FillBucketEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSleepInBedEvent;
 import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.event.world.SleepFinishedTimeEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
@@ -127,23 +135,148 @@ public class EventHandler {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onBlockBreak(BlockEvent.BreakEvent event){
-        String name = event.getState().getBlock().getName().getString();
+        if (!ConfigHandler.enableGuide.get()) return;
+        if (!ConfigHandler.outputBroke.get()) return;
 
-        sendMessage(event.getPlayer(), "Broke: " + name);
+        Block block = event.getState().getBlock();
+        String name = block.getName().getString();
+        String msg = "Broke: ";
+
+        if (Blocks.FIRE.equals(block) || Blocks.SOUL_FIRE.equals(block)) {
+            msg = "Put out: ";
+        }
+
+        sendMessage(event.getPlayer(), msg + name);
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onBlockPlace(BlockEvent.EntityPlaceEvent event){
+        if (!ConfigHandler.enableGuide.get()) return;
+        if (!ConfigHandler.outputPlaced.get()) return;
         if (!(event.getEntity() instanceof PlayerEntity)) return;
 
         PlayerEntity player = (PlayerEntity) event.getEntity();
-        String name = event.getPlacedBlock().getBlock().getName().getString();
+        Block block = event.getPlacedBlock().getBlock();
+        String name = block.getName().getString();
+        String msg = "Placed: ";
 
-        sendMessage(player, "Placed: " + name);
+        if (Blocks.FIRE.equals(block) || Blocks.SOUL_FIRE.equals(block)) {
+            msg = "Lit: ";
+        } else if (Blocks.FARMLAND.equals(block)) {
+            msg = "Tilled: ";
+        }
+
+        sendMessage(player, msg + name);
     }
 
-        @SubscribeEvent
+    //broken currently
+    //@SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public static void onBucketFilled(FillBucketEvent event) {
+        if (!ConfigHandler.enableGuide.get()) return;
+
+        if (event.getTarget() == null) return;
+
+        String name = event.getEmptyBucket().getHoverName().getString();
+
+        sendMessage(event.getPlayer(), "Filled bucket: " + name);
+    }
+
+    @SubscribeEvent
+    public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (!ConfigHandler.enableGuide.get()) return;
+
+        String name;
+
+        if (event.getTo().equals(World.NETHER)) {
+            name = "Nether";
+        } else if (event.getTo().equals(World.END)) {
+            name = "End";
+        } else if (event.getTo().equals(World.OVERWORLD)) {
+            name = "Overworld";
+        } else {
+            name = "Unknown";
+        }
+
+        sendMessage(event.getPlayer(), "Changed dimension to the " + name);
+    }
+
+    //broken currently
+    //@SubscribeEvent
+    public static void onSleepInBed(PlayerSleepInBedEvent event) {
+        if (!ConfigHandler.enableGuide.get()) return;
+
+
+        if ((event.getResultStatus().equals(PlayerEntity.SleepResult.NOT_POSSIBLE_HERE))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.NOT_POSSIBLE_HERE))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.NOT_POSSIBLE_NOW))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.NOT_SAFE))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.OBSTRUCTED))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.TOO_FAR_AWAY))
+            || (event.getResultStatus().equals(PlayerEntity.SleepResult.OTHER_PROBLEM))){
+            return;
+        }
+
+        sendMessage(event.getPlayer(), "Sleeping in bed...");
+    }
+
+    //broken currently
+    //@SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public static void onWakeUp(SleepFinishedTimeEvent event) {
+        if (!ConfigHandler.enableGuide.get()) return;
+
+        String msg = "day";
+        long dayTime = event.getNewTime();
+
+        if (dayTime >= 0 && dayTime < 6000){
+            msg = "day";
+        } else if (dayTime >= 6000 && dayTime < 12000){
+            msg = "noon";
+        } else if (dayTime >= 12000 && dayTime < 13000){
+            msg = "sunset";
+        } else if (dayTime >= 13000 && dayTime < 18000){
+            msg = "night";
+        } else if (dayTime >= 18000 && dayTime < 23000){
+            msg = "midnight";
+        } else if (dayTime >= 23000 && dayTime < 23999){
+            msg = "sunrise";
+        }
+
+        if (!msg.equals("day")) return;
+
+        PlayerEntity player = Minecraft.getInstance().player;
+
+        sendMessage(player, "Time set to " + msg);
+    }
+
+
+    //broken currently
+    //@SubscribeEvent
+    @OnlyIn(Dist.CLIENT)
+    public static void onItemUsed(LivingEntityUseItemEvent event) {
+        if (!ConfigHandler.enableGuide.get()) return;
+        //if (!ConfigHandler.outputPlaced.get()) return;
+
+        if (!(event.getEntity() instanceof PlayerEntity)) return;
+        PlayerEntity player = (PlayerEntity) event.getEntity();
+
+        //if client isnt this player, exit (cant test multiplayer easily)
+        //if (Minecraft.getInstance().player != null && !player.is(Minecraft.getInstance().player)) return;
+
+        Item item = event.getItem().getItem();
+        String name = event.getItem().getHoverName().getString();
+        String msg = "Used: ";
+
+        if (Items.BOW == item) {
+            msg = "Shot: ";
+        }
+
+        sendMessage(player, "Used: " + name);
+    }
+
+    @SubscribeEvent
     public static void openContainerEvent(PlayerContainerEvent event){
         if (event instanceof PlayerContainerEvent.Open) isMenuOpened = true;
         if (event instanceof PlayerContainerEvent.Close) isMenuOpened = false;
@@ -186,7 +319,7 @@ public class EventHandler {
     static BlockPos lastPos = BlockPos.ZERO;
     static int warnCount = 0;
 
-    //too buggy currently
+    //broken currently
     //@SubscribeEvent
     public static void onPlayerMoveEvent(TickEvent.PlayerTickEvent event){
         if (!ConfigHandler.enableGuide.get()) return;

@@ -14,6 +14,8 @@ public class ConfigHandler {
     public static final ForgeConfigSpec.BooleanValue outputTooltips;
     public static final ForgeConfigSpec.BooleanValue outputHotbarChange;
     public static final ForgeConfigSpec.BooleanValue outputDrops;
+    public static final ForgeConfigSpec.BooleanValue outputBroke;
+    public static final ForgeConfigSpec.BooleanValue outputPlaced;
     public static final ForgeConfigSpec.BooleanValue extendedMode;
     public static final ForgeConfigSpec.BooleanValue enableGuide;
     public static final ForgeConfigSpec.BooleanValue warnNearbyFalls;
@@ -37,7 +39,7 @@ public class ConfigHandler {
         outputPickups = BUILDER.comment(desc).define("outputPickups", true);
 
         desc = "Output contents of chests and other containers to chat";
-        outputContainers = BUILDER.comment(desc).define("outputContainers", true);
+        outputContainers = BUILDER.comment(desc).define("outputContainers", false);
 
         desc = "Output tooltips when hovering over items in containers to chat";
         outputTooltips = BUILDER.comment(desc).define("outputTooltips", true);
@@ -47,6 +49,12 @@ public class ConfigHandler {
 
         desc = "Output dropped itemstack to chat";
         outputDrops = BUILDER.comment(desc).define("outputDrops", true);
+
+        desc = "Output blocks broken by player to chat";
+        outputBroke = BUILDER.comment(desc).define("outputBroke", true);
+
+        desc = "Output blocks placed by player to chat";
+        outputPlaced = BUILDER.comment(desc).define("outputPlaced", true);
 
         desc = "Enable extended mode";
         extendedMode = BUILDER.comment(desc).define("extendedMode", false);

@@ -20,6 +20,8 @@ public class CommandHandler {
                         .then(ExtendedRange.register(dispatcher))
                         .then(ReadBlocks.register(dispatcher))
                         .then(ReadEntities.register(dispatcher))
+                        .then(ReadBroken.register(dispatcher))
+                        .then(ReadPlaced.register(dispatcher))
         );
 
         dispatcher.register(Commands.literal("guide").redirect(commandNode));

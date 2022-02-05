@@ -23,9 +23,10 @@ public class BlockGuide
         //tooltips on hover to chat
         //output selected hotbar itemstack when scrolling or otherwise selecting a new slot
         //output drops
+        //output placed block, broke block
 
         //NOT IMPLEMENTED
-        //output placed block, used item, broke block
+        //output used item
         //output killed mob
         //press z for distance to target? or add command for distance readout toggle
         //nearby hostile mobs in view to chat
